@@ -299,8 +299,11 @@ export const LogoutUser = async () => {
 };
 
 // Create User (Admin)
-export const CreateUser = async (username, password, type = "user") => {
+export const CreateUser = async (username, password, type) => {
   try {
+    console.log(
+      `username : ${username} password : ${password} type : ${type}`,
+    );
     const token = getCsrfToken();
     console.log(token);
     const res = await api.post(

@@ -221,6 +221,7 @@ const AdminPanel = () => {
     try {
       // IMPORTANT: Send type as the third argument.
       const response = await CreateUser(username, password, type);
+      console.log("response => ", response);
 
       if (response?.success === false || response?.status === "error") {
         setNotice(

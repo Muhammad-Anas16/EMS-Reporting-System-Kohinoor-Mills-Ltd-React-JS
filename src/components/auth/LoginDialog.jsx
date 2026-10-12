@@ -113,18 +113,6 @@ const LoginDialog = ({ onLogin, triggerLabel = "Login", islogin = false }) => {
 
   return (
     <>
-      {!islogin && (
-        <Button
-          type="button"
-          className="h-10 rounded-lg bg-cyan-500 px-5 font-semibold text-slate-950 hover:bg-cyan-400"
-          onClick={() => {
-            // Dialog already opens automatically while logged out.
-          }}
-        >
-          {triggerLabel}
-        </Button>
-      )}
-
       <Dialog open={open} onOpenChange={handleOpenChange} modal>
         <DialogContent
           showCloseButton={islogin}

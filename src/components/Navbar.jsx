@@ -7,13 +7,12 @@ import {
   UserRound,
 } from "lucide-react";
 import { useNavigate } from "react-router";
-import { checkUserIsLogin, LogoutUser } from "@/api/api";
+import { LogoutUser } from "@/api/api";
 
-const Navbar = () => {
+const Navbar = ({ userData = "user" }) => {
   const navigate = useNavigate();
 
   const [data, setData] = useState(new Date());
-  const [role, setRole] = useState("user");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -26,21 +25,7 @@ const Navbar = () => {
 
     return () => clearInterval(interval);
   }, []);
-
-  useEffect(() => {
-    const userdata = async () => {
-      try {
-        const data = await checkUserIsLogin();
-        setRole(data?.user);
-      } catch (error) {
-        console.log(error.message || "Interval Server Error");
-      }
-    };
-
-    userdata();
-  }, []);
-
-  console.log("Navbar : ", role);
+  
   // Close dropdown when clicking outside.
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -156,7 +141,7 @@ const Navbar = () => {
                 role="menu"
                 className="absolute right-0 top-full z-50 mt-2 w-52 overflow-hidden rounded-xl border border-white/10 bg-[#0b1219] p-1.5 shadow-xl shadow-black/40"
               >
-                {role?.role !== "user" && (
+                {userData?.role !== "user" && (
                   <button
                     type="button"
                     role="menuitem"
