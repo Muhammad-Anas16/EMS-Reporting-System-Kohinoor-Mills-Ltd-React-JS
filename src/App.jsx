@@ -252,11 +252,12 @@ function App() {
       try {
         const response = await checkUserIsLogin();
 
-        console.log("Authentication status:", response);
+        console.log("Authentication status:", response?.isLoggedIn);
 
         if (!isMounted) return;
 
         if (response?.isLoggedIn === true && response?.user) {
+          
           setUser(response.user);
         } else {
           setUser(null);
