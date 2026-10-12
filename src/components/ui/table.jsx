@@ -6,13 +6,17 @@ function Table({
   ...props
 }) {
   return (
-    <div data-slot="table-container" className="relative w-full overflow-x-auto">
+    <div
+      data-slot="table-container"
+      className="relative w-full overflow-x-auto"
+    >
       <table
         data-slot="table"
         className={cn("w-full caption-bottom text-sm", className)}
-        {...props} />
+        {...props}
+      />
     </div>
-  );
+  )
 }
 
 function TableHeader({
@@ -23,8 +27,9 @@ function TableHeader({
     <thead
       data-slot="table-header"
       className={cn("[&_tr]:border-b", className)}
-      {...props} />
-  );
+      {...props}
+    />
+  )
 }
 
 function TableBody({
@@ -35,8 +40,9 @@ function TableBody({
     <tbody
       data-slot="table-body"
       className={cn("[&_tr:last-child]:border-0", className)}
-      {...props} />
-  );
+      {...props}
+    />
+  )
 }
 
 function TableFooter({
@@ -46,9 +52,13 @@ function TableFooter({
   return (
     <tfoot
       data-slot="table-footer"
-      className={cn("border-t bg-muted/50 font-medium [&>tr]:last:border-b-0", className)}
-      {...props} />
-  );
+      className={cn(
+        "border-t bg-muted/50 font-medium [&>tr]:last:border-b-0",
+        className
+      )}
+      {...props}
+    />
+  )
 }
 
 function TableRow({
@@ -62,8 +72,9 @@ function TableRow({
         "border-b transition-colors hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted",
         className
       )}
-      {...props} />
-  );
+      {...props}
+    />
+  )
 }
 
 function TableHead({
@@ -77,8 +88,9 @@ function TableHead({
         "h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0",
         className
       )}
-      {...props} />
-  );
+      {...props}
+    />
+  )
 }
 
 function TableCell({
@@ -92,8 +104,9 @@ function TableCell({
         "p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0",
         className
       )}
-      {...props} />
-  );
+      {...props}
+    />
+  )
 }
 
 function TableCaption({
@@ -104,8 +117,9 @@ function TableCaption({
     <caption
       data-slot="table-caption"
       className={cn("mt-4 text-sm text-muted-foreground", className)}
-      {...props} />
-  );
+      {...props}
+    />
+  )
 }
 
 export {

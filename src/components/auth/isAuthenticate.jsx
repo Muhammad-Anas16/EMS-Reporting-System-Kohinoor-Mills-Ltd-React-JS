@@ -1,27 +1,89 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import LoginDialog from "./LoginDialog";
 import { checkUserIsLogin, LoginUser } from "@/api/api";
 
 const IsAuthenticate = () => {
   const [isUser, setIsUser] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
+
   useEffect(() => {
-    const res = async () => {
-      const abc = await checkUserIsLogin();
-      console.log();
-      setIsUser(abc?.isLoggedIn);
+    let isMounted = true;
+
+    const checkLoginStatus = async () => {
+      try {
+        const res = await checkUserIsLogin();
+
+        if (!isMounted) return;
+
+        console.log("Login status response:", res);
+
+        setIsUser(res?.isLoggedIn === true);
+      } catch (error) {
+        console.error("Login status check failed:", error);
+
+        if (isMounted) {
+          setIsUser(false);
+        }
+      } finally {
+        if (isMounted) {
+          setIsChecking(false);
+        }
+      }
     };
-    res();
-  }, [isUser]);
+
+    checkLoginStatus();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleLogin = async ({ username, password }) => {
-    const res = await LoginUser(username, password);
+    try {
+      const res = await LoginUser(username.trim(), password);
 
-    if (!res?.success) {
-      throw new Error(result.message || "Invalid email or password.");
+      console.log("Login API response:", res);
+
+      // LoginUser ke response mein success true hona zaroori hai.
+      if (res?.success !== true) {
+        return {
+          success: false,
+          message:
+            res?.message ||
+            res?.data?.message ||
+            "Invalid username or password.",
+        };
+      }
+
+      // Update UI after the API confirms successful login.
+      setIsUser(true);
+
+      return {
+        success: true,
+        data: res?.data,
+      };
+    } catch (error) {
+      console.error("Login failed:", error);
+
+      setIsUser(false);
+
+      return {
+        success: false,
+        message:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Login failed. Please check your credentials and try again.",
+      };
     }
-
-    console.log("Login successful", res?.data);
   };
+
+  if (isChecking) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-sm text-slate-400">
+        Checking login status...
+      </div>
+    );
+  }
 
   return <LoginDialog onLogin={handleLogin} islogin={isUser} />;
 };

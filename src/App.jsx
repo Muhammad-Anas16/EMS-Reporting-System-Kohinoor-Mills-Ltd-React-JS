@@ -7,6 +7,7 @@ import ConsumptionData from "./page/consuptionData";
 import ReportPage from "./page/reportPage";
 import PerDepartmentPage from "./page/perDepartmentPage";
 import IsAuthenticate from "./components/auth/isAuthenticate";
+import AdminPanel from "./page/AdminPanel";
 
 function App() {
 
@@ -17,6 +18,7 @@ function App() {
 
       <Routes>
         <Route path="/" element={<DashboardPage />} />
+        <Route path="/admin" element={<AdminPanel />} />
 
         <Route path="/:divisionName">
           {/* /dyeing */}

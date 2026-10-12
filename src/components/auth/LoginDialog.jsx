@@ -32,10 +32,12 @@ const loginSchema = yup
   .required();
 
 const LoginDialog = ({ onLogin, triggerLabel = "Login", islogin = false }) => {
-  const [open, setOpen] = useState(!islogin);
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState("");
   const [infoMessage, setInfoMessage] = useState("");
+
+  // Dialog is open whenever the user is not authenticated.
+  const open = !islogin;
 
   const {
     register,
@@ -51,10 +53,8 @@ const LoginDialog = ({ onLogin, triggerLabel = "Login", islogin = false }) => {
     },
   });
 
-  // Keep dialog synchronized with the parent's login state.
+  // Clear form state when authentication succeeds.
   useEffect(() => {
-    setOpen(!islogin);
-
     if (islogin) {
       reset();
       setShowPassword(false);
@@ -64,13 +64,10 @@ const LoginDialog = ({ onLogin, triggerLabel = "Login", islogin = false }) => {
   }, [islogin, reset]);
 
   const handleOpenChange = (nextOpen) => {
-    // Do not allow the dialog to close while logged out.
+    // Never allow a logged-out user to dismiss the login dialog.
     if (!islogin && !nextOpen) {
-      setOpen(true);
       return;
     }
-
-    setOpen(nextOpen);
 
     if (!nextOpen) {
       reset();
@@ -92,18 +89,19 @@ const LoginDialog = ({ onLogin, triggerLabel = "Login", islogin = false }) => {
     try {
       const result = await onLogin(values);
 
-      // Parent should update islogin to true after successful authentication.
       if (result?.success === false) {
         setServerError(result.message || "Invalid username or password.");
         return;
       }
 
-      // Do not assume login succeeded just because onLogin returned.
-      if (result?.success === true) {
-        setOpen(false);
-        reset();
-        setShowPassword(false);
+      if (result?.success !== true) {
+        setInfoMessage(
+          "Login status could not be confirmed. Please try again.",
+        );
       }
+
+      // The parent must set islogin=true after successful authentication.
+      // The dialog then closes automatically through `open = !islogin`.
     } catch (error) {
       setServerError(
         error instanceof Error && error.message
@@ -115,29 +113,21 @@ const LoginDialog = ({ onLogin, triggerLabel = "Login", islogin = false }) => {
 
   return (
     <>
-      {/* Only show the manual login button when logged out.
-          The dialog itself opens automatically. */}
       {!islogin && (
         <Button
           type="button"
-          onClick={() => setOpen(true)}
           className="h-10 rounded-lg bg-cyan-500 px-5 font-semibold text-slate-950 hover:bg-cyan-400"
+          onClick={() => {
+            // Dialog already opens automatically while logged out.
+          }}
         >
           {triggerLabel}
         </Button>
       )}
 
-      <Dialog open={!islogin && open} onOpenChange={handleOpenChange}>
+      <Dialog open={open} onOpenChange={handleOpenChange} modal>
         <DialogContent
-          onEscapeKeyDown={(event) => {
-            if (!islogin) event.preventDefault();
-          }}
-          onPointerDownOutside={(event) => {
-            if (!islogin) event.preventDefault();
-          }}
-          onInteractOutside={(event) => {
-            if (!islogin) event.preventDefault();
-          }}
+          showCloseButton={islogin}
           className="w-[calc(100%-2rem)] max-w-[420px] overflow-hidden rounded-2xl border border-white/15 bg-slate-950/50 p-0 text-slate-100 shadow-[0_0_60px_rgba(6,182,212,0.10)] backdrop-blur-2xl supports-[backdrop-filter]:bg-slate-950/40 sm:rounded-2xl"
         >
           <div className="h-px w-full bg-gradient-to-r from-transparent via-cyan-400/80 to-transparent" />
@@ -253,7 +243,6 @@ const LoginDialog = ({ onLogin, triggerLabel = "Login", islogin = false }) => {
                 )}
               </div>
 
-              {/* Login error */}
               {serverError && (
                 <p
                   className="rounded-lg border border-rose-400/20 bg-rose-500/10 px-3 py-2.5 text-sm text-rose-300"
@@ -263,7 +252,6 @@ const LoginDialog = ({ onLogin, triggerLabel = "Login", islogin = false }) => {
                 </p>
               )}
 
-              {/* Information */}
               {infoMessage && (
                 <p
                   className="rounded-lg border border-cyan-400/20 bg-cyan-400/10 px-3 py-2.5 text-sm leading-5 text-cyan-200"

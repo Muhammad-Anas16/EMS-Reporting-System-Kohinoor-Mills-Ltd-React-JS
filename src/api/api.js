@@ -292,18 +292,47 @@ export const checkUserIsLogin = async () => {
   }
 };
 
+// logout user
+export const LogoutUser = async () => {
+  const response = await api.post("/auth/logout");
+  return response.data;
+};
+
 // Create User (Admin)
 export const CreateUser = async (username, password, type = "user") => {
   try {
+    const token = getCsrfToken();
+    console.log(token);
     const res = await api.post(
       "/admin/users",
       { username, password, type },
       {
         headers: {
-          "X-CSRF-Token": getCsrfToken(),
+          "X-CSRF-Token": token,
         },
       },
     );
+
+    console.log("API : ", sessionStorage.getItem("csrfToken"));
+
+    return res.data;
+  } catch (error) {
+    return {
+      success: false,
+      message: getErrorMessage(error, "User create karne mein error aaya."),
+    };
+  }
+};
+
+// get all the users
+export const GetAllUser = async () => {
+  try {
+    const token = getCsrfToken();
+    const res = await api.get("/admin/users", {
+      headers: {
+        "X-CSRF-Token": token,
+      },
+    });
 
     return res.data;
   } catch (error) {
