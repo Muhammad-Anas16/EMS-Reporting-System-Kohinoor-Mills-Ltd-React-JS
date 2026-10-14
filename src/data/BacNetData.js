@@ -1305,8 +1305,21 @@ export const divisionData = (division = "apparel", data = BacNetData) => {
   }));
 };
 
+// export const getSpecificValue = (division = "apparel", key) => {
+//   const lower = division.toLowerCase()
+//   const meters = divisionData(lower);
+
+//   // Return all meter objects
+//   if (!key) {
+//     return meters;
+//   }
+
+//   // Return a specific property as an array
+//   return meters.map((item) => item[key]);
+// };
+
 export const getSpecificValue = (division = "apparel", key) => {
-  const lower = division.toLowerCase()
+  const lower = division.toLowerCase();
   const meters = divisionData(lower);
 
   // Return all meter objects
@@ -1314,6 +1327,6 @@ export const getSpecificValue = (division = "apparel", key) => {
     return meters;
   }
 
-  // Return a specific property as an array
-  return meters.map((item) => item[key]);
+  // Return a specific property as an array of Numbers
+  return meters.map((item) => Number(item[key]));
 };

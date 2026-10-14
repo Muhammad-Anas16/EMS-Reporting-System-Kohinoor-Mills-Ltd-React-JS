@@ -140,6 +140,7 @@ const getBACnetData = async (instances = []) => {
 
 const findBACnetValueForMeter = (meter, bacnetData = []) => {
   const meterInstance = Number(meter?.instance);
+  console.log("meterInstance : ", meterInstance);
 
   if (!Number.isFinite(meterInstance)) {
     return null;
@@ -277,6 +278,7 @@ const AuroraUtilities = async (division = "Dyeing") => {
     --------------------------------------------- */
 
     const meters = getMetersData(division);
+    // console.log("meters : ", meters);
 
     /* ---------------------------------------------
        Actual division name from config
@@ -284,18 +286,21 @@ const AuroraUtilities = async (division = "Dyeing") => {
     --------------------------------------------- */
 
     const actualDivision = meters?.[0]?.division || division;
+    // console.log("actualDivision : ", actualDivision);
 
     /* ---------------------------------------------
        BACnet instances
     --------------------------------------------- */
 
     const instances = getBACnetInstances(meters);
+    console.log("instances : ", instances);
 
     /* ---------------------------------------------
        Live BACnet data
     --------------------------------------------- */
 
     const bacNetResult = await getBACnetData(instances);
+    // console.log("bacNetResult : ", bacNetResult);
 
     /* ---------------------------------------------
        Merge live values

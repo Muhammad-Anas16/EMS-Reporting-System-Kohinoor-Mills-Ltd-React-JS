@@ -11,7 +11,7 @@ import PerDepartmentPage from "./page/perDepartmentPage";
 import IsAuthenticate from "./components/auth/isAuthenticate";
 import AdminPanel from "./page/AdminPanel";
 import { checkUserIsLogin } from "./api/api";
-import { getSpecificValue } from "./data/BacNetData";
+import AuroraData from "./api/filter/getauroraData";
 
 const PageNotFound = () => (
   <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
@@ -24,7 +24,13 @@ function App() {
   const [user, setUser] = useState(null);
   const [isChecking, setIsChecking] = useState(true);
 
-  // const apparelMeters = getSpecificValue("apparel", "instance");
+  useEffect(() => {
+    const result = async () => {
+      const res = await AuroraData("dyeing");
+      console.log("My => ", res);
+    };
+    result();
+  }, []);
 
   // Admin detection
   const isAdmin = [
