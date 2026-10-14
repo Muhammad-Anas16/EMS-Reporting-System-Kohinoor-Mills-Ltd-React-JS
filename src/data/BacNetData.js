@@ -1,4 +1,4 @@
-const meterInstances = {
+export const BacNetData = {
   dyeing: {
     incoming: {
       lesco: 14140,

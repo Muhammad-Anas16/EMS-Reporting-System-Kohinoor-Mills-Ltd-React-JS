@@ -277,6 +277,7 @@ const AuroraUtilities = async (division = "Dyeing") => {
     --------------------------------------------- */
 
     const meters = getMetersData(division);
+    console.log("meters : ", meters);
 
     /* ---------------------------------------------
        Actual division name from config
@@ -290,6 +291,7 @@ const AuroraUtilities = async (division = "Dyeing") => {
     --------------------------------------------- */
 
     const instances = getBACnetInstances(meters);
+
     /* ---------------------------------------------
        Live BACnet data
     --------------------------------------------- */
