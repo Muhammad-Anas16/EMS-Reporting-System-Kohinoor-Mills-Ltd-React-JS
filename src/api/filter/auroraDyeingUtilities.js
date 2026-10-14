@@ -120,8 +120,6 @@ const getBACnetData = async (instances = []) => {
       requestedInstances: response?.requestedInstances || instances || [],
     };
   } catch (error) {
-    console.error("BACnet Error:", error);
-
     return {
       success: false,
       data: [],
@@ -141,7 +139,6 @@ const getBACnetData = async (instances = []) => {
 
 const findBACnetValueForMeter = (meter, bacnetData = []) => {
   const meterInstance = Number(meter?.instance);
-  // console.log("meterInstance : ", meterInstance);
 
   if (!Number.isFinite(meterInstance)) {
     return null;
@@ -279,7 +276,6 @@ const AuroraUtilities = async (division = "Dyeing") => {
     --------------------------------------------- */
 
     const meters = getMetersData(division);
-    // console.log("meters : ", meters);
 
     /* ---------------------------------------------
        Actual division name from config
@@ -287,7 +283,6 @@ const AuroraUtilities = async (division = "Dyeing") => {
     --------------------------------------------- */
 
     const actualDivision = meters?.[0]?.division || division;
-    // console.log("actualDivision : ", actualDivision);
 
     /* ---------------------------------------------
        BACnet instances
@@ -295,14 +290,13 @@ const AuroraUtilities = async (division = "Dyeing") => {
 
     // const instances = getBACnetInstances(meters);
     const instances = getSpecificValue(division, "instance");
-    // console.log("instances : ", instances);
 
     /* ---------------------------------------------
        Live BACnet data
     --------------------------------------------- */
 
     const bacNetResult = await getBACnetData(instances);
-    console.log("bacNetResult : ", bacNetResult);
+    // console.log("bacNetResult : ", bacNetResult);
 
     /* ---------------------------------------------
        Merge live values
@@ -371,7 +365,6 @@ const AuroraUtilities = async (division = "Dyeing") => {
       }),
     };
   } catch (error) {
-    console.error("AuroraUtilities Error:", error);
 
     return {
       division,

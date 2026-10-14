@@ -4,6 +4,7 @@ import AuroraUtilities from "@/api/filter/auroraDyeingUtilities";
 
 export const useAuroraDyeingUtilities = () => {
   const { divisionName } = useParams();
+  console.log("divisionName => ", divisionName);
 
   const division = decodeURIComponent(divisionName || "Dyeing").trim();
 
