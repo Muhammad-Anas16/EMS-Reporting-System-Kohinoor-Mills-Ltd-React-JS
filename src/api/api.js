@@ -301,9 +301,7 @@ export const LogoutUser = async () => {
 // Create User (Admin)
 export const CreateUser = async (username, password, type) => {
   try {
-    console.log(
-      `username : ${username} password : ${password} type : ${type}`,
-    );
+    console.log(`username : ${username} password : ${password} type : ${type}`);
     const token = getCsrfToken();
     console.log(token);
     const res = await api.post(
@@ -367,5 +365,143 @@ export const UpdateAdminSettings = async (settingsData) => {
     };
   }
 };
+
+// update project configurations
+export const ProjectConfiguration = async (
+  ipAddress,
+  ipPassword,
+  deviceId,
+  targetPort,
+  corsOrigin,
+) => {
+  try {
+    console.log(
+      `ipAddress : ${ipAddress} ipPassword : ${ipPassword} deviceId : ${deviceId} targetPort : ${targetPort} corsOrigin : ${corsOrigin}`,
+    );
+    const token = getCsrfToken();
+    console.log(token);
+    const res = await api.post(
+      "/admin/users",
+      {
+        ipAddress: ipAddress || "192.168.1.20",
+        ipPassword,
+        deviceId,
+        targetPort: targetPort || "47808",
+        corsOrigin: corsOrigin || "http://localhost:5173",
+      },
+      {
+        headers: {
+          "X-CSRF-Token": token,
+        },
+      },
+    );
+
+    console.log("API : ", sessionStorage.getItem("csrfToken"));
+
+    return res.data;
+  } catch (error) {
+    return {
+      success: false,
+      message: getErrorMessage(error, "User create karne mein error aaya."),
+    };
+  }
+};
+
+// Get current server configuration
+export const getProjectConfiguration = async () => {
+  try {
+    const res = await api.get("/admin/settings");
+    return res.data;
+  } catch (error) {
+    return {
+      success: false,
+      message: getErrorMessage(
+        error,
+        "Server settings load nahi ho sakin."
+      ),
+    };
+  }
+};
+
+// Create initial server configuration
+export const createProjectConfiguration = async (settings) => {
+  try {
+    const token = getCsrfToken();
+
+    const res = await api.post(
+      "/admin/settings",
+      settings,
+      {
+        headers: {
+          "X-CSRF-Token": token,
+        },
+      }
+    );
+
+    return res.data;
+  } catch (error) {
+    return {
+      success: false,
+      message: getErrorMessage(
+        error,
+        "Server configuration create nahi ho saki."
+      ),
+    };
+  }
+};
+
+// Update existing server configuration
+export const updateProjectConfiguration = async (settings) => {
+  try {
+    const token = getCsrfToken();
+
+    const res = await api.put(
+      "/admin/settings",
+      settings,
+      {
+        headers: {
+          "X-CSRF-Token": token,
+        },
+      }
+    );
+
+    return res.data;
+  } catch (error) {
+    return {
+      success: false,
+      message: getErrorMessage(
+        error,
+        "Server settings update nahi ho sakin."
+      ),
+    };
+  }
+};
+
+// Delete server connection configuration
+export const deleteProjectConfiguration = async () => {
+  try {
+    const token = getCsrfToken();
+
+    const res = await api.delete(
+      "/admin/settings",
+      {
+        headers: {
+          "X-CSRF-Token": token,
+        },
+      }
+    );
+
+    return res.data;
+  } catch (error) {
+    return {
+      success: false,
+      message: getErrorMessage(
+        error,
+        "Server configuration delete nahi ho saki."
+      ),
+    };
+  }
+};
+
 
 export default api;
