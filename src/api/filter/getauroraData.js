@@ -1,40 +1,33 @@
 import { getSpecificValue } from "@/data/BacNetData";
 import { bacnetRead } from "../api";
 
-//    5. Read BACnet data
 const getBACnetData = async (instances = []) => {
-  // Active
   try {
     const response = await bacnetRead(instances);
 
-    const foundData = (response?.data || []).flatMap((item) => {
-      const parentInstance = getBACnetInstance(item);
+    if (response?.success === false) {
+      return {
+        success: false,
+        data: [],
+        message: response.message || "BACnet data read failed",
+      };
+    }
 
-      return (item?.found || []).map((found) => {
-        const foundInstance = getBACnetInstance(found);
-
-        return {
-          ...found,
-
-          instance: foundInstance !== null ? foundInstance : parentInstance,
-
-          value: getBACnetValue(found),
-        };
-      });
-    });
+    const foundData = (response?.data || []).flatMap((item) =>
+      (item?.found || []).map((found) => ({
+        ...found,
+      })),
+    );
 
     return {
       success: true,
       data: foundData,
-      matchedObjects: response?.matchedObjects || 0,
-      requestedInstances: response?.requestedInstances || instances || [],
+      message: "Get BacNet Data Successfully",
     };
   } catch (error) {
     return {
       success: false,
       data: [],
-      matchedObjects: 0,
-      requestedInstances: instances || [],
       message:
         error?.response?.data?.message ||
         error?.message ||

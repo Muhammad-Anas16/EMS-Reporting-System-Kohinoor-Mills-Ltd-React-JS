@@ -1,4 +1,5 @@
 import { bacnetRead, getEnergyLog } from "@/api/api";
+import { getSpecificValue } from "@/data/BacNetData";
 import EmsDataFile from "@/data/ems_config_40";
 
 /* =========================================================
@@ -140,7 +141,7 @@ const getBACnetData = async (instances = []) => {
 
 const findBACnetValueForMeter = (meter, bacnetData = []) => {
   const meterInstance = Number(meter?.instance);
-  console.log("meterInstance : ", meterInstance);
+  // console.log("meterInstance : ", meterInstance);
 
   if (!Number.isFinite(meterInstance)) {
     return null;
@@ -292,15 +293,16 @@ const AuroraUtilities = async (division = "Dyeing") => {
        BACnet instances
     --------------------------------------------- */
 
-    const instances = getBACnetInstances(meters);
-    console.log("instances : ", instances);
+    // const instances = getBACnetInstances(meters);
+    const instances = getSpecificValue(division, "instance");
+    // console.log("instances : ", instances);
 
     /* ---------------------------------------------
        Live BACnet data
     --------------------------------------------- */
 
     const bacNetResult = await getBACnetData(instances);
-    // console.log("bacNetResult : ", bacNetResult);
+    console.log("bacNetResult : ", bacNetResult);
 
     /* ---------------------------------------------
        Merge live values

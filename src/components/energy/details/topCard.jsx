@@ -95,7 +95,7 @@ import React from "react";
 import { Building2, Activity, Zap, Radio, ChevronRight } from "lucide-react";
 
 const TopCard = ({ utilis }) => {
-  console.log("utilis => ", utilis?.departments)
+  // console.log("utilis => ", utilis?.departments)
   const formatValue = (value) => {
     const number = Number(value);
 

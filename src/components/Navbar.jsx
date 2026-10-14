@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { LogoutUser } from "@/api/api";
+import AuroraData from "@/api/filter/getauroraData";
 
 const Navbar = ({ userData = "user" }) => {
   const navigate = useNavigate();
@@ -25,7 +26,7 @@ const Navbar = ({ userData = "user" }) => {
 
     return () => clearInterval(interval);
   }, []);
-  
+
   // Close dropdown when clicking outside.
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -39,6 +40,14 @@ const Navbar = ({ userData = "user" }) => {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
+  }, []);
+
+  useEffect(() => {
+    const result = async () => {
+      const res = await AuroraData("dyeing");
+      console.log("My => ", res);
+    };
+    result();
   }, []);
 
   const handleAdminPanel = () => {
