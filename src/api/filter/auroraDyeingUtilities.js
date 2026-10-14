@@ -290,7 +290,6 @@ const AuroraUtilities = async (division = "Dyeing") => {
     --------------------------------------------- */
 
     const instances = getBACnetInstances(meters);
-
     /* ---------------------------------------------
        Live BACnet data
     --------------------------------------------- */
