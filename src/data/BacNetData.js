@@ -1220,3 +1220,100 @@ export const BacNetData = {
     },
   },
 };
+
+// Extract all BACnet meter instances
+export const extractAllInstances = (data = BacNetData) => {
+  const instances = {};
+
+  const traverse = (node, division, path = []) => {
+    if (!node || typeof node !== "object" || Array.isArray(node)) {
+      return;
+    }
+
+    const meterKey = path[path.length - 1] ?? "";
+
+    // A meter contains status, power, amp and kwh instance numbers.
+    const isMeter =
+      typeof node.status === "number" ||
+      typeof node.power === "number" ||
+      typeof node.amp === "number" ||
+      typeof node.kwh === "number";
+
+    if (isMeter) {
+      const sectionIndex = path.findIndex(
+        (key) => key === "departments" || key === "htGroups",
+      );
+
+      const department =
+        sectionIndex !== -1 ? (path[sectionIndex + 1] ?? "") : "";
+
+      instances[division].data[meterKey] = {
+        division,
+        department,
+        meter_key: meterKey,
+        meter_name: node.name ?? meterKey,
+        status: node.status ?? null,
+        power: node.power ?? null,
+        amp: node.amp ?? null,
+        kwh: node.kwh ?? null,
+        scale: node.scale ?? 1,
+      };
+    }
+
+    Object.entries(node).forEach(([key, value]) => {
+      if (value && typeof value === "object") {
+        traverse(value, division, [...path, key]);
+      }
+    });
+  };
+
+  Object.entries(data).forEach(([division, divisionObject]) => {
+    if (!divisionObject || typeof divisionObject !== "object") {
+      return;
+    }
+
+    instances[division] = { data: {} };
+
+    if (divisionObject.departments) {
+      traverse(divisionObject.departments, division, ["departments"]);
+    }
+
+    if (divisionObject.htGroups) {
+      traverse(divisionObject.htGroups, division, ["htGroups"]);
+    }
+  });
+
+  return instances;
+};
+
+// Get meters for a specific division
+export const divisionData = (division = "apparel", data = BacNetData) => {
+  const allInstances = extractAllInstances(data);
+  const divisionInstances = allInstances[division]?.data ?? {};
+
+  return Object.values(divisionInstances).map((item) => ({
+    amp: item.amp,
+    division: item.division,
+    instance: item.power,
+    kwh: item.kwh,
+    power: item.power,
+    status: item.status,
+    meter_key: item.meter_key,
+    meter_name: item.meter_name,
+    department: item.department,
+    scale: item.scale,
+  }));
+};
+
+export const getSpecificValue = (division = "apparel", key) => {
+  const lower = division.toLowerCase()
+  const meters = divisionData(lower);
+
+  // Return all meter objects
+  if (!key) {
+    return meters;
+  }
+
+  // Return a specific property as an array
+  return meters.map((item) => item[key]);
+};

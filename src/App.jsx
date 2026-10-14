@@ -11,6 +11,7 @@ import PerDepartmentPage from "./page/perDepartmentPage";
 import IsAuthenticate from "./components/auth/isAuthenticate";
 import AdminPanel from "./page/AdminPanel";
 import { checkUserIsLogin } from "./api/api";
+import { getSpecificValue } from "./data/BacNetData";
 
 const PageNotFound = () => (
   <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
@@ -22,6 +23,8 @@ const PageNotFound = () => (
 function App() {
   const [user, setUser] = useState(null);
   const [isChecking, setIsChecking] = useState(true);
+
+  // const apparelMeters = getSpecificValue("apparel", "instance");
 
   // Admin detection
   const isAdmin = [
