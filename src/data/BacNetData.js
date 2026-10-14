@@ -1289,6 +1289,12 @@ export const extractAllInstances = (data = BacNetData) => {
 // Get meters for a specific division
 export const divisionData = (division = "apparel", data = BacNetData) => {
   const allInstances = extractAllInstances(data);
+  // console.log("BacNetData : ", allInstances);
+  for (let i = 0; i < allInstances.length; i++) {
+    console.log(allInstances[i]);
+  }
+  console.log("BacNetData : ", allInstances);
+  // const divisionInstances = allInstances[division]?.data ?? {};
   const divisionInstances = allInstances[division]?.data ?? {};
 
   return Object.values(divisionInstances).map((item) => ({
@@ -1304,19 +1310,6 @@ export const divisionData = (division = "apparel", data = BacNetData) => {
     scale: item.scale,
   }));
 };
-
-// export const getSpecificValue = (division = "apparel", key) => {
-//   const lower = division.toLowerCase()
-//   const meters = divisionData(lower);
-
-//   // Return all meter objects
-//   if (!key) {
-//     return meters;
-//   }
-
-//   // Return a specific property as an array
-//   return meters.map((item) => item[key]);
-// };
 
 export const getSpecificValue = (division = "apparel", key) => {
   const lower = division.toLowerCase();
