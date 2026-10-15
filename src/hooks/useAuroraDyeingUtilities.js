@@ -23,33 +23,61 @@
 //     placeholderData: (previousData) => previousData,
 //   });
 // };
+
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useParams } from "react-router";
+
 import AuroraUtilities from "@/api/filter/auroraDyeingUtilities";
 import { setDivisionData } from "@/redux/slice/dataSlice";
 
-export const useAuroraDyeingUtilities = () => {
+export const useAuroraDyeingUtilities = (fallbackDivision = "Dyeing") => {
   const { divisionName } = useParams();
   const dispatch = useDispatch();
 
-  const division = decodeURIComponent(divisionName || "Dyeing").trim();
+  // URL division takes priority over the fallback argument.
+  const division = decodeURIComponent(
+    divisionName || fallbackDivision || "Dyeing",
+  )
+    .trim()
+    .toLowerCase();
+
+  // Read previously loaded data from Redux.
+  const cachedData = useSelector((state) => state.data.byDivision[division]);
 
   const query = useQuery({
     queryKey: ["auroraUtilities", division],
-    queryFn: () => AuroraUtilities(division),
-    refetchInterval: 30 * 1000,
-    enabled: Boolean(division),
-    placeholderData: (previousData) => previousData,
+
+    queryFn: async () => {
+      const result = await AuroraUtilities(division);
+
+      // Do not cache unsuccessful API responses as valid data.
+      if (!result?.success) {
+        throw new Error(result?.message || `Failed to load ${division} data`);
+      }
+
+      return result;
+    },
+
+    // Request data only when this division is not cached.
+    enabled: Boolean(division) && cachedData === undefined,
+
+    // Keep fetched data in React Query's cache indefinitely.
+    staleTime: Infinity,
+    gcTime: Infinity,
+
+    // Avoid automatic repeat requests.
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+
+    retry: 1,
   });
 
+  // Save successfully fetched data in Redux.
   useEffect(() => {
-    if (
-      query.isSuccess &&
-      !query.isPlaceholderData &&
-      query.data !== undefined
-    ) {
+    if (query.isSuccess && query.data !== undefined) {
       dispatch(
         setDivisionData({
           division,
@@ -57,13 +85,23 @@ export const useAuroraDyeingUtilities = () => {
         }),
       );
     }
-  }, [
-    query.data,
-    query.isSuccess,
-    query.isPlaceholderData,
-    division,
-    dispatch,
-  ]);
+  }, [query.isSuccess, query.data, division, dispatch]);
 
-  return query;
+  // Prefer Redux data when available.
+  const data = cachedData ?? query.data;
+
+  return {
+    ...query,
+    data,
+
+    // Cached data should not show the initial loading screen.
+    isPending: cachedData === undefined && query.isPending,
+
+    // An API error matters only if no cached data is available.
+    isError: cachedData === undefined && query.isError,
+    error: cachedData === undefined ? query.error : null,
+
+    // Cached-only reads do not represent a network request.
+    isFetching: cachedData === undefined && query.isFetching,
+  };
 };

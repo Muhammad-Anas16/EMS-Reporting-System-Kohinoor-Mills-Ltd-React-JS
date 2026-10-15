@@ -1,429 +1,46 @@
-// import { bacnetRead, getEnergyLog } from "@/api/api";
-// import { getSpecificValue } from "@/data/BacNetData";
-// import EmsDataFile from "@/data/ems_config_40";
-
-// /* =========================================================
-//    1. Get meters from EMS configuration
-//    Case-insensitive division matching
-// ========================================================= */
-
-// const getMetersData = (division) => {
-//   const requestedDivision = String(division || "")
-//     .trim()
-//     .toLowerCase();
-
-//   return (EmsDataFile?.meters || []).filter((item) => {
-//     const meterDivision = String(item?.division || "")
-//       .trim()
-//       .toLowerCase();
-
-//     return meterDivision === requestedDivision;
-//   });
-// };
-
-// /* =========================================================
-//    2. Get BACnet instances
-// ========================================================= */
-
-// const getBACnetInstances = (meters = []) => {
-//   return [
-//     ...new Set(
-//       meters
-//         .map((item) => Number(item?.instance))
-//         .filter((instance) => Number.isFinite(instance)),
-//     ),
-//   ];
-// };
-
-// /* =========================================================
-//    3. Normalize BACnet instance
-// ========================================================= */
-
-// const getBACnetInstance = (item) => {
-//   const possibleInstances = [
-//     item?.instance,
-//     item?.instanceNumber,
-//     item?.objectInstance,
-//     item?.object_instance,
-//     item?.requestedInstance,
-//     item?.requested_instance,
-//     item?.object?.instance,
-//     item?.object?.objectInstance,
-//   ];
-
-//   for (const value of possibleInstances) {
-//     const number = Number(value);
-
-//     if (Number.isFinite(number)) {
-//       return number;
-//     }
-//   }
-
-//   return null;
-// };
-
-// /* =========================================================
-//    4. Normalize BACnet value
-// ========================================================= */
-
-// const getBACnetValue = (item) => {
-//   const possibleValues = [
-//     item?.value,
-//     item?.presentValue,
-//     item?.present_value,
-//     item?.currentValue,
-//     item?.current_value,
-//   ];
-
-//   for (const value of possibleValues) {
-//     if (
-//       value !== null &&
-//       value !== undefined &&
-//       value !== "" &&
-//       Number.isFinite(Number(value))
-//     ) {
-//       return Number(value);
-//     }
-//   }
-
-//   return null;
-// };
-
-// /* =========================================================
-//    5. Read BACnet data
-// ========================================================= */
-
-// const getBACnetData = async (instances = []) => {
-//   try {
-//     const response = await bacnetRead(instances);
-
-//     const foundData = (response?.data || []).flatMap((item) => {
-//       const parentInstance = getBACnetInstance(item);
-
-//       return (item?.found || []).map((found) => {
-//         const foundInstance = getBACnetInstance(found);
-
-//         return {
-//           ...found,
-
-//           instance: foundInstance !== null ? foundInstance : parentInstance,
-
-//           value: getBACnetValue(found),
-//         };
-//       });
-//     });
-
-//     return {
-//       success: true,
-//       data: foundData,
-//       matchedObjects: response?.matchedObjects || 0,
-//       requestedInstances: response?.requestedInstances || instances || [],
-//     };
-//   } catch (error) {
-//     return {
-//       success: false,
-//       data: [],
-//       matchedObjects: 0,
-//       requestedInstances: instances || [],
-//       message:
-//         error?.response?.data?.message ||
-//         error?.message ||
-//         "BACnet data read failed",
-//     };
-//   }
-// };
-
-// /* =========================================================
-//    6. Find BACnet live value for meter
-// ========================================================= */
-
-// const findBACnetValueForMeter = (meter, bacnetData = []) => {
-//   const meterInstance = Number(meter?.instance);
-
-//   if (!Number.isFinite(meterInstance)) {
-//     return null;
-//   }
-
-//   const matches = bacnetData.filter((item) => {
-//     const bacnetInstance = Number(getBACnetInstance(item));
-
-//     return Number.isFinite(bacnetInstance) && bacnetInstance === meterInstance;
-//   });
-
-//   if (matches.length === 0) {
-//     return null;
-//   }
-
-//   /* ---------------------------------------------
-//      Parameter match
-//   --------------------------------------------- */
-
-//   const meterParameter = meter?.parameter;
-
-//   if (
-//     meterParameter !== undefined &&
-//     meterParameter !== null &&
-//     meterParameter !== ""
-//   ) {
-//     const parameterMatch = matches.find((item) => {
-//       return (
-//         item?.parameter === meterParameter ||
-//         item?.parameterId === meterParameter ||
-//         item?.property === meterParameter ||
-//         item?.propertyId === meterParameter
-//       );
-//     });
-
-//     if (parameterMatch) {
-//       return getBACnetValue(parameterMatch);
-//     }
-//   }
-
-//   /* ---------------------------------------------
-//      Fallback to first instance match
-//   --------------------------------------------- */
-
-//   return getBACnetValue(matches[0]);
-// };
-
-// /* =========================================================
-//    7. Merge config + live BACnet data
-// ========================================================= */
-
-// const mergeMeterData = (meters = [], bacnetData = []) => {
-//   return meters.map((meter) => {
-//     const liveValue = findBACnetValueForMeter(meter, bacnetData);
-
-//     return {
-//       ...meter,
-
-//       value: liveValue,
-//       liveValue,
-//       currentValue: liveValue,
-//       bacnetValue: liveValue,
-
-//       hasLiveValue: liveValue !== null,
-//     };
-//   });
-// };
-
-// /* =========================================================
-//    8. Calculate total live value
-// ========================================================= */
-
-// const calculateTotalValue = (meters = []) => {
-//   return meters.reduce((total, meter) => {
-//     const value = Number(meter?.value);
-
-//     if (!Number.isFinite(value)) {
-//       return total;
-//     }
-
-//     return total + value;
-//   }, 0);
-// };
-
-// /* =========================================================
-//    9. Group meters by utilities
-// ========================================================= */
-
-// const groupByUtilities = async () => {
-//   try {
-//     const result = await getEnergyLog();
-
-//     if (!Array.isArray(result?.energylog)) {
-//       return [];
-//     }
-
-//     const utilities = result.energylog
-//       .map((item) => item?.utilityType)
-//       .filter(Boolean);
-
-//     return [...new Set(utilities)];
-//   } catch (error) {
-//     console.error("Utilities Group Error:", error);
-
-//     return [];
-//   }
-// };
-
-// /* =========================================================
-//    10. Group meters by department
-// ========================================================= */
-
-// const groupByDepartment = (meters = []) => {
-//   return meters.reduce((result, meter) => {
-//     const department = meter?.department || "Unknown";
-
-//     if (!result[department]) {
-//       result[department] = [];
-//     }
-
-//     result[department].push(meter);
-
-//     return result;
-//   }, {});
-// };
-
-// /* =========================================================
-//    11. Main function
-// ========================================================= */
-
-// const AuroraUtilities = async (division = "Dyeing") => {
-//   try {
-//       //  Config meters
-//     const meters = getMetersData(division);
-
-//     const actualDivision = meters?.[0]?.division || division;
-
-//     /* ---------------------------------------------
-//        BACnet instances
-//     --------------------------------------------- */
-
-//     // const instances = getBACnetInstances(meters);
-//     const instances = getSpecificValue("power");
-//     console.log("check instances", instances.dyeing);
-
-//     //  Live BACnet data
-//     const bacNetResult = await getBACnetData(instances.dyeing);
-//     console.log("bacNetResult : ", bacNetResult.data);
-
-//     /* ---------------------------------------------
-//        Merge live values
-//     --------------------------------------------- */
-
-//     const liveMeters = mergeMeterData(meters, bacNetResult.data);
-
-//     /* ---------------------------------------------
-//        Total live value
-//     --------------------------------------------- */
-
-//     const totalValue = calculateTotalValue(liveMeters);
-
-//     /* ---------------------------------------------
-//        Departments
-//     --------------------------------------------- */
-
-//     const departmentData = groupByDepartment(liveMeters);
-
-//     /* ---------------------------------------------
-//        Utilities
-//     --------------------------------------------- */
-
-//     const utilities = await groupByUtilities();
-
-//     /* ---------------------------------------------
-//        Final response
-//     --------------------------------------------- */
-
-//     return {
-//       division: actualDivision,
-
-//       utilities: {
-//         type: utilities,
-//         data: null,
-//       },
-
-//       departments: {
-//         type: Object.keys(departmentData),
-//         data: departmentData,
-//       },
-
-//       Data: liveMeters,
-
-//       dataCount: liveMeters.length,
-
-//       totalValue: {
-//         value: totalValue,
-//         totaObject: liveMeters.length,
-//       },
-
-//       totalLoad: totalValue,
-
-//       totalConsumption: totalValue,
-
-//       bacnetData: bacNetResult.data,
-
-//       success: bacNetResult.success,
-
-//       matchedObjects: bacNetResult.matchedObjects,
-
-//       requestedInstances: bacNetResult.requestedInstances,
-
-//       ...(bacNetResult.message && {
-//         message: bacNetResult.message,
-//       }),
-//     };
-//   } catch (error) {
-//     return {
-//       division,
-
-//       utilities: {
-//         type: [],
-//         data: null,
-//       },
-
-//       departments: {
-//         type: [],
-//         data: {},
-//       },
-
-//       Data: [],
-
-//       dataCount: 0,
-
-//       totalValue: {
-//         value: 0,
-//         totaObject: 0,
-//       },
-
-//       totalLoad: 0,
-
-//       totalConsumption: 0,
-
-//       bacnetData: [],
-
-//       matchedObjects: 0,
-
-//       requestedInstances: [],
-
-//       success: false,
-
-//       message:
-//         error?.response?.data?.message ||
-//         error?.message ||
-//         "Aurora utilities data failed",
-//     };
-//   }
-// };
-
-// export default AuroraUtilities;
-
 import { bacnetRead, getEnergyLog } from "@/api/api";
 import { getSpecificValue } from "@/data/BacNetData";
-import EmsDataFile from "@/data/ems_config_40";
 
-/* =========================================================
-   1. Get meters for requested division
-========================================================= */
-
-const getMetersData = (division) => {
-  const requestedDivision = String(division || "")
+//  1. Normalize division name
+const normalizeDivision = (division = "Dyeing") => {
+  return String(division || "Dyeing")
     .trim()
     .toLowerCase();
-
-  return (EmsDataFile?.meters || []).filter(
-    (item) =>
-      String(item?.division || "")
-        .trim()
-        .toLowerCase() === requestedDivision,
-  );
 };
 
-/* =========================================================
-   2. Normalize BACnet instance
-========================================================= */
+//  2. Get meter records directly from BacNetData
+const getMetersData = (division) => {
+  const divisionKey = normalizeDivision(division);
 
+  const result = getSpecificValue(null, divisionKey);
+
+  const meters = result?.[divisionKey];
+
+  if (!Array.isArray(meters)) {
+    return [];
+  }
+
+  return meters.map((meter) => ({
+    ...meter,
+    division: meter.division || divisionKey,
+    meter_key: meter.meter_key,
+    meter_name: meter.meter_name || meter.meter_key,
+    department: meter.department || "Unknown",
+  }));
+};
+
+//  3. Get unique power instances for requested division
+const getBACnetInstances = (meters = []) => {
+  return [
+    ...new Set(
+      meters
+        .map((meter) => Number(meter.power))
+        .filter((instance) => Number.isSafeInteger(instance) && instance >= 0),
+    ),
+  ];
+};
+
+//  4. Normalize BACnet instance
 const getBACnetInstance = (item) => {
   const possibleInstances = [
     item?.instance,
@@ -443,7 +60,7 @@ const getBACnetInstance = (item) => {
 
     const number = Number(value);
 
-    if (Number.isFinite(number)) {
+    if (Number.isSafeInteger(number) && number >= 0) {
       return number;
     }
   }
@@ -451,10 +68,7 @@ const getBACnetInstance = (item) => {
   return null;
 };
 
-/* =========================================================
-   3. Normalize BACnet value
-========================================================= */
-
+//  5. Normalize BACnet value
 const getBACnetValue = (item) => {
   const possibleValues = [
     item?.value,
@@ -479,28 +93,56 @@ const getBACnetValue = (item) => {
   return null;
 };
 
-/* =========================================================
-   4. Read BACnet data
-========================================================= */
-
+//  6. Read live BACnet data
 const getBACnetData = async (instances = []) => {
+  const requestedInstances = [...new Set(instances)];
+
+  if (!requestedInstances.length) {
+    return {
+      success: false,
+      data: [],
+      matchedObjects: 0,
+      requestedInstances: [],
+      message: "No BACnet power instances found for this division",
+    };
+  }
+
   try {
-    if (!instances.length) {
-      return {
-        success: false,
-        data: [],
-        matchedObjects: 0,
-        requestedInstances: [],
-        message: "No BACnet instances found for this division",
-      };
-    }
+    const response = await bacnetRead(requestedInstances);
 
-    const response = await bacnetRead(instances);
+    // Support either an array or an API response object.
+    const responseData = Array.isArray(response)
+      ? response
+      : Array.isArray(response?.data)
+        ? response.data
+        : [];
 
-    const foundData = (response?.data || []).flatMap((item) => {
+    const foundData = responseData.flatMap((item) => {
       const parentInstance = getBACnetInstance(item);
 
-      return (item?.found || []).map((found) => {
+      // Some API responses return found objects; others return
+      // the actual value directly on the parent object.
+      if (!Array.isArray(item?.found)) {
+        const instance =
+          parentInstance ??
+          getBACnetInstance({
+            instance: item?.requestedInstance,
+          });
+
+        if (instance === null) {
+          return [];
+        }
+
+        return [
+          {
+            ...item,
+            instance,
+            value: getBACnetValue(item),
+          },
+        ];
+      }
+
+      return item.found.map((found) => {
         const foundInstance = getBACnetInstance(found);
 
         return {
@@ -512,17 +154,18 @@ const getBACnetData = async (instances = []) => {
     });
 
     return {
-      success: true,
+      success: response?.success !== false,
       data: foundData,
-      matchedObjects: response?.matchedObjects || 0,
-      requestedInstances: response?.requestedInstances || instances,
+      matchedObjects: response?.matchedObjects ?? foundData.length,
+      requestedInstances: response?.requestedInstances ?? requestedInstances,
+      ...(response?.message && { message: response.message }),
     };
   } catch (error) {
     return {
       success: false,
       data: [],
       matchedObjects: 0,
-      requestedInstances: instances,
+      requestedInstances,
       message:
         error?.response?.data?.message ||
         error?.message ||
@@ -531,83 +174,57 @@ const getBACnetData = async (instances = []) => {
   }
 };
 
-/* =========================================================
-   5. Find live value for a meter
-========================================================= */
-
+//  7. Find live value by power instance
 const findBACnetValueForMeter = (meter, bacnetData = []) => {
-  const meterInstance = getBACnetInstance(meter);
+  const meterInstance = Number(meter?.power);
 
-  if (meterInstance === null) {
+  if (!Number.isSafeInteger(meterInstance) || meterInstance < 0) {
     return null;
   }
 
-  const matches = bacnetData.filter(
+  const match = bacnetData.find(
     (item) => getBACnetInstance(item) === meterInstance,
   );
 
-  if (!matches.length) {
-    return null;
-  }
-
-  const meterParameter = meter?.parameter;
-
-  if (
-    meterParameter !== undefined &&
-    meterParameter !== null &&
-    meterParameter !== ""
-  ) {
-    const parameterMatch = matches.find(
-      (item) =>
-        item?.parameter === meterParameter ||
-        item?.parameterId === meterParameter ||
-        item?.property === meterParameter ||
-        item?.propertyId === meterParameter,
-    );
-
-    if (parameterMatch) {
-      return getBACnetValue(parameterMatch);
-    }
-  }
-
-  return getBACnetValue(matches[0]);
+  return match ? getBACnetValue(match) : null;
 };
 
-/* =========================================================
-   6. Merge meter configuration with live data
-========================================================= */
-
+//  8. Merge meter records with live power readings
 const mergeMeterData = (meters = [], bacnetData = []) => {
   return meters.map((meter) => {
     const liveValue = findBACnetValueForMeter(meter, bacnetData);
 
     return {
       ...meter,
+
+      // Keep the configured BACnet instance separate from
+      // the actual live reading.
+      instance: meter.power,
+
       value: liveValue,
       liveValue,
       currentValue: liveValue,
       bacnetValue: liveValue,
+
       hasLiveValue: liveValue !== null,
     };
   });
 };
 
-/* =========================================================
-   7. Calculate total live value
-========================================================= */
-
+//  9. Calculate total live power
 const calculateTotalValue = (meters = []) => {
   return meters.reduce((total, meter) => {
-    const value = Number(meter?.value);
+    if (meter?.liveValue === null || meter?.liveValue === undefined) {
+      return total;
+    }
+
+    const value = Number(meter.liveValue);
 
     return Number.isFinite(value) ? total + value : total;
   }, 0);
 };
 
-/* =========================================================
-   8. Get utility types
-========================================================= */
-
+//  10. Get utility types
 const groupByUtilities = async () => {
   try {
     const result = await getEnergyLog();
@@ -627,10 +244,7 @@ const groupByUtilities = async () => {
   }
 };
 
-/* =========================================================
-   9. Group meters by department
-========================================================= */
-
+//  11. Group meters by department
 const groupByDepartment = (meters = []) => {
   return meters.reduce((result, meter) => {
     const department = meter?.department || "Unknown";
@@ -645,50 +259,62 @@ const groupByDepartment = (meters = []) => {
   }, {});
 };
 
-/* =========================================================
-   10. Main function
-========================================================= */
+//  12. Standard error response
+const createErrorResponse = (division, message) => ({
+  division,
+  utilities: {
+    type: [],
+    data: null,
+  },
+  departments: {
+    type: [],
+    data: {},
+  },
+  Data: [],
+  dataCount: 0,
+  totalValue: {
+    value: 0,
+    totaObject: 0,
+  },
+  totalLoad: 0,
+  totalConsumption: 0,
+  bacnetData: [],
+  matchedObjects: 0,
+  requestedInstances: [],
+  success: false,
+  message,
+});
 
+//  13. Main function
 const AuroraUtilities = async (division = "Dyeing") => {
-  const requestedDivision = String(division || "Dyeing").trim();
-  const divisionKey = requestedDivision.toLowerCase();
+  const divisionKey = normalizeDivision(division);
 
   try {
-    // Config meters for requested division
-    const meters = getMetersData(requestedDivision);
+    // Read all meter details from BacNetData via getSpecificValue.
+    const meters = getMetersData(divisionKey);
 
-    const actualDivision = meters?.[0]?.division || requestedDivision;
+    if (!meters.length) {
+      return createErrorResponse(
+        divisionKey,
+        `No meter configuration found for division: ${divisionKey}`,
+      );
+    }
 
-    // Get power instances for ALL divisions
-    const instancesByDivision = getSpecificValue("power");
+    // Only request this division's power instances.
+    const instances = getBACnetInstances(meters);
 
-    // Automatically select requested division
-    const divisionInstances = [
-      ...new Set(
-        (instancesByDivision?.[divisionKey] || [])
-          .map(Number)
-          .filter(Number.isFinite),
-      ),
-    ];
+    // Read live values.
+    const bacNetResult = await getBACnetData(instances);
 
-    // Read live BACnet data for this division only
-    const bacNetResult = await getBACnetData(divisionInstances);
-
-    // Merge live values with configuration
+    // Merge readings into the matching meter records.
     const liveMeters = mergeMeterData(meters, bacNetResult.data);
 
-    // Calculate totals
     const totalValue = calculateTotalValue(liveMeters);
-
-    // Group by department
     const departmentData = groupByDepartment(liveMeters);
-
-    // Get utility types
     const utilities = await groupByUtilities();
 
-    // Final response
     return {
-      division: actualDivision,
+      division: divisionKey,
 
       utilities: {
         type: utilities,
@@ -721,40 +347,14 @@ const AuroraUtilities = async (division = "Dyeing") => {
       }),
     };
   } catch (error) {
-    return {
-      division: requestedDivision,
+    console.error("AuroraUtilities Error:", error);
 
-      utilities: {
-        type: [],
-        data: null,
-      },
-
-      departments: {
-        type: [],
-        data: {},
-      },
-
-      Data: [],
-      dataCount: 0,
-
-      totalValue: {
-        value: 0,
-        totaObject: 0,
-      },
-
-      totalLoad: 0,
-      totalConsumption: 0,
-
-      bacnetData: [],
-      matchedObjects: 0,
-      requestedInstances: [],
-      success: false,
-
-      message:
-        error?.response?.data?.message ||
+    return createErrorResponse(
+      divisionKey,
+      error?.response?.data?.message ||
         error?.message ||
         "Aurora utilities data failed",
-    };
+    );
   }
 };
 

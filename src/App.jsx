@@ -11,6 +11,7 @@ import PerDepartmentPage from "./page/perDepartmentPage";
 import IsAuthenticate from "./components/auth/isAuthenticate";
 import AdminPanel from "./page/AdminPanel";
 import { checkUserIsLogin } from "./api/api";
+import DivisionDataPreloader from "./components/DivisionDataPreloader";
 
 const PageNotFound = () => (
   <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
@@ -92,6 +93,8 @@ function App() {
 
   return (
     <main className="min-h-screen bg-[#070a0e] text-white">
+      {user && isAdmin && <DivisionDataPreloader enabled={isAdmin} />}
+
       {user && <Navbar userData={user} />}
 
       <IsAuthenticate

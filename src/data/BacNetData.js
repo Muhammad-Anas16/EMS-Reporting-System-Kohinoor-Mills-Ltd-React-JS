@@ -1221,7 +1221,100 @@ export const BacNetData = {
   },
 };
 
-// Extract all BACnet meter instances
+// // Extract all BACnet meter instances
+// export const extractAllInstances = (data = BacNetData) => {
+//   const instances = {};
+
+//   const traverse = (node, division, path = []) => {
+//     if (!node || typeof node !== "object" || Array.isArray(node)) {
+//       return;
+//     }
+
+//     const meterKey = path[path.length - 1] ?? "";
+
+//     // A meter contains status, power, amp and kwh instance numbers.
+//     const isMeter =
+//       typeof node.status === "number" ||
+//       typeof node.power === "number" ||
+//       typeof node.amp === "number" ||
+//       typeof node.kwh === "number";
+
+//     if (isMeter) {
+//       const sectionIndex = path.findIndex(
+//         (key) => key === "departments" || key === "htGroups",
+//       );
+
+//       const department =
+//         sectionIndex !== -1 ? (path[sectionIndex + 1] ?? "") : "";
+
+//       instances[division].data[meterKey] = {
+//         division,
+//         department,
+//         meter_key: meterKey,
+//         meter_name: node.name ?? meterKey,
+//         status: node.status ?? null,
+//         power: node.power ?? null,
+//         amp: node.amp ?? null,
+//         kwh: node.kwh ?? null,
+//         scale: node.scale ?? 1,
+//       };
+//     }
+
+//     Object.entries(node).forEach(([key, value]) => {
+//       if (value && typeof value === "object") {
+//         traverse(value, division, [...path, key]);
+//       }
+//     });
+//   };
+
+//   Object.entries(data).forEach(([division, divisionObject]) => {
+//     if (!divisionObject || typeof divisionObject !== "object") {
+//       return;
+//     }
+
+//     instances[division] = { data: {} };
+
+//     if (divisionObject.departments) {
+//       traverse(divisionObject.departments, division, ["departments"]);
+//     }
+
+//     if (divisionObject.htGroups) {
+//       traverse(divisionObject.htGroups, division, ["htGroups"]);
+//     }
+//   });
+
+//   return instances;
+// };
+
+// // Get meters for a specific division
+// export const divisionData = (division = "apparel", data = BacNetData) => {
+//   const allInstances = extractAllInstances(data);
+
+//   const formattedData = Object.fromEntries(
+//     Object.entries(allInstances).map(([division, value]) => [
+//       division,
+//       Object.values(value.data || {}),
+//     ]),
+//   );
+
+//   // console.log("BacNetData:", formattedData);
+
+//   return formattedData;
+// };
+// // extract instances from it
+// export const getSpecificValue = (key) => {
+//   const meters = divisionData();
+
+//   const result = Object.fromEntries(
+//     Object.entries(meters).map(([division, items]) => [
+//       division,
+//       items.map((item) => (key ? item[key] : item)),
+//     ]),
+//   );
+//   return result;
+// };
+
+// Extract all meter instances from BacNetData
 export const extractAllInstances = (data = BacNetData) => {
   const instances = {};
 
@@ -1232,14 +1325,12 @@ export const extractAllInstances = (data = BacNetData) => {
 
     const meterKey = path[path.length - 1] ?? "";
 
-    // A meter contains status, power, amp and kwh instance numbers.
-    const isMeter =
-      typeof node.status === "number" ||
-      typeof node.power === "number" ||
-      typeof node.amp === "number" ||
-      typeof node.kwh === "number";
+    // Identify a meter by its BACnet instance fields.
+    const isMeter = ["status", "power", "amp", "kwh"].some((key) =>
+      Number.isFinite(node[key]),
+    );
 
-    if (isMeter) {
+    if (isMeter && meterKey) {
       const sectionIndex = path.findIndex(
         (key) => key === "departments" || key === "htGroups",
       );
@@ -1261,55 +1352,76 @@ export const extractAllInstances = (data = BacNetData) => {
     }
 
     Object.entries(node).forEach(([key, value]) => {
-      if (value && typeof value === "object") {
+      if (value && typeof value === "object" && !Array.isArray(value)) {
         traverse(value, division, [...path, key]);
       }
     });
   };
 
-  Object.entries(data).forEach(([division, divisionObject]) => {
-    if (!divisionObject || typeof divisionObject !== "object") {
+  Object.entries(data || {}).forEach(([division, divisionObject]) => {
+    if (
+      !divisionObject ||
+      typeof divisionObject !== "object" ||
+      Array.isArray(divisionObject)
+    ) {
       return;
     }
 
     instances[division] = { data: {} };
 
-    if (divisionObject.departments) {
-      traverse(divisionObject.departments, division, ["departments"]);
-    }
-
-    if (divisionObject.htGroups) {
-      traverse(divisionObject.htGroups, division, ["htGroups"]);
-    }
+    ["departments", "htGroups"].forEach((section) => {
+      if (divisionObject[section]) {
+        traverse(divisionObject[section], division, [section]);
+      }
+    });
   });
 
   return instances;
 };
 
-// Get meters for a specific division
-export const divisionData = (division = "apparel", data = BacNetData) => {
+// Get meter records for one division or all divisions
+export const divisionData = (division, data = BacNetData) => {
   const allInstances = extractAllInstances(data);
 
   const formattedData = Object.fromEntries(
-    Object.entries(allInstances).map(([division, value]) => [
-      division,
+    Object.entries(allInstances).map(([divisionName, value]) => [
+      divisionName,
       Object.values(value.data || {}),
     ]),
   );
 
-  // console.log("BacNetData:", formattedData);
+  // Return one division when requested; otherwise return all divisions.
+  if (typeof division === "string" && division.trim()) {
+    const normalizedDivision = division.trim().toLowerCase();
+
+    return formattedData[normalizedDivision] ?? [];
+  }
 
   return formattedData;
 };
-// extract instances from it
-export const getSpecificValue = (key) => {
-  const meters = divisionData();
 
-  const result = Object.fromEntries(
-    Object.entries(meters).map(([division, items]) => [
-      division,
-      items.map((item) => (key ? item[key] : item)),
+// Get a specific field or complete meter records for each division
+export const getSpecificValue = (key, division, data = BacNetData) => {
+  const meters = divisionData(undefined, data);
+
+  const filteredMeters =
+    typeof division === "string" && division.trim()
+      ? {
+          [division.trim().toLowerCase()]:
+            meters[division.trim().toLowerCase()] ?? [],
+        }
+      : meters;
+
+  return Object.fromEntries(
+    Object.entries(filteredMeters).map(([divisionName, items]) => [
+      divisionName,
+      items.map((item) => {
+        // No key means return the complete meter record.
+        if (!key) return item;
+
+        // Return the requested field, or null if it doesn't exist.
+        return item[key] ?? null;
+      }),
     ]),
   );
-  return result;
 };
