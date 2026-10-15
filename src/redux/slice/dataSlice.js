@@ -1,23 +1,20 @@
 import { createSlice } from "@reduxjs/toolkit";
 
-export const counterSlice = createSlice({
-  name: "counter",
-  initialState: {
-    value: 0,
-  },
+const initialState = {
+  byDivision: {},
+};
+
+const dataSlice = createSlice({
+  name: "data",
+  initialState,
   reducers: {
-    increment: (state) => {
-      state.value += 1;
-    },
-    decrement: (state) => {
-      state.value -= 1;
-    },
-    incrementByAmount: (state, action) => {
-      state.value += action.payload;
+    setDivisionData: (state, action) => {
+      const { division, data } = action.payload;
+      state.byDivision[division] = data;
     },
   },
 });
 
-export const { increment, decrement, incrementByAmount } = counterSlice.actions;
+export const { setDivisionData } = dataSlice.actions;
 
-export default counterSlice.reducer;
+export default dataSlice.reducer;
