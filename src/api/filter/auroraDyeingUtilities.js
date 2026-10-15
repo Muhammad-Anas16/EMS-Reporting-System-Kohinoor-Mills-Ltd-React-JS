@@ -1,5 +1,6 @@
 import { bacnetRead, getEnergyLog } from "@/api/api";
 import { getSpecificValue } from "@/data/BacNetData";
+import { getIncomingInstances } from "@/data/UtilitiesData";
 
 //  1. Normalize division name
 const normalizeDivision = (division = "Dyeing") => {
@@ -313,6 +314,10 @@ const AuroraUtilities = async (division = "Dyeing") => {
     const departmentData = groupByDepartment(liveMeters);
     const utilities = await groupByUtilities();
 
+    const incomingData = getIncomingInstances(division);
+    const bacNetIncomingResult = await getBACnetData(incomingData);
+    console.log(bacNetIncomingResult.data);
+
     return {
       division: divisionKey,
 
@@ -333,6 +338,8 @@ const AuroraUtilities = async (division = "Dyeing") => {
         value: totalValue,
         totaObject: liveMeters.length,
       },
+
+      incoming: bacNetIncomingResult.data || [],
 
       totalLoad: totalValue,
       totalConsumption: totalValue,
