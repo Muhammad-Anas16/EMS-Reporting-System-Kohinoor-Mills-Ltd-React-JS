@@ -8,9 +8,12 @@ import DashboardPage from "./page/dashboard";
 import ConsumptionData from "./page/consuptionData";
 import ReportPage from "./page/reportPage";
 import PerDepartmentPage from "./page/perDepartmentPage";
+import CurrentLoadPage from "./page/energy/CurrentLoadPage";
+
 import IsAuthenticate from "./components/auth/isAuthenticate";
 import AdminPanel from "./page/AdminPanel";
 import { checkUserIsLogin } from "./api/api";
+import TodaysConsumption from "./components/energy/TodaysConsumption";
 
 const PageNotFound = () => (
   <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
@@ -96,6 +99,7 @@ function App() {
 
       {user && (
         <Routes>
+          {/* Root route */}
           <Route
             path="/"
             element={
@@ -109,41 +113,62 @@ function App() {
             }
           />
 
+          {/* Admin panel */}
           <Route
             path="/admin"
             element={isAdmin ? <AdminPanel /> : <PageNotFound />}
           />
 
+          {/* Regular user routes */}
           {!isAdmin && userType && (
             <>
               <Route path={userPath} element={<ConsumptionData />} />
 
-              <Route path={`${userPath}/list`} element={<ReportPage />} />
-
               <Route
-                path={`${userPath}/:department`}
-                element={<PerDepartmentPage />}
+                path={`${userPath}/current-load`}
+                element={<CurrentLoadPage />}
               />
+
+              <Route path={`${userPath}/list`} element={<ReportPage />} />
 
               <Route
                 path={`${userPath}/:department/list`}
                 element={<PerDepartmentPage />}
               />
+
+              <Route
+                path={`${userPath}/todays-consumption`}
+                element={<TodaysConsumption />}
+              />
+
+              <Route
+                path={`${userPath}/:department`}
+                element={<PerDepartmentPage />}
+              />
             </>
           )}
 
+          {/* Admin division routes */}
           {isAdmin && (
             <Route path="/:divisionName">
               <Route index element={<ConsumptionData />} />
 
+              <Route path="current-load" element={<CurrentLoadPage />} />
+
               <Route path="list" element={<ReportPage />} />
+
+              <Route path=":department/list" element={<PerDepartmentPage />} />
 
               <Route path=":department" element={<PerDepartmentPage />} />
 
-              <Route path=":department/list" element={<PerDepartmentPage />} />
+              <Route
+                path="todays-consumption"
+                element={<TodaysConsumption />}
+              />
             </Route>
           )}
 
+          {/* Unknown routes */}
           <Route
             path="*"
             element={
