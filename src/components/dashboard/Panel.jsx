@@ -9,3 +9,11 @@ const Panel = ({ children, className = "" }) => {
 };
 
 export default Panel;
+
+// const Panel = ({ children, className = "" }) => {
+//   return (
+//     <section className={`glass-panel min-w-0 ${className}`}>{children}</section>
+//   );
+// };
+
+// export default Panel;
