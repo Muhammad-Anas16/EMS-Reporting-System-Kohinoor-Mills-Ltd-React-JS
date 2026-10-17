@@ -1,131 +1,93 @@
-// import { useEffect, useState } from "react";
-// import LoginDialog from "./LoginDialog";
-// import { checkUserIsLogin, LoginUser } from "@/api/api";
-
-// const IsAuthenticate = () => {
-//   const [isUser, setIsUser] = useState(false);
-//   const [isChecking, setIsChecking] = useState(true);
-
-//   useEffect(() => {
-//     let isMounted = true;
-
-//     const checkLoginStatus = async () => {
-//       try {
-//         const res = await checkUserIsLogin();
-
-//         if (!isMounted) return;
-
-//         // console.log("Login status response:", res);
-
-//         setIsUser(res?.isLoggedIn === true);
-//       } catch (error) {
-//         console.error("Login status check failed:", error);
-
-//         if (isMounted) {
-//           setIsUser(false);
-//         }
-//       } finally {
-//         if (isMounted) {
-//           setIsChecking(false);
-//         }
-//       }
-//     };
-
-//     checkLoginStatus();
-
-//     return () => {
-//       isMounted = false;
-//     };
-//   }, [isUser]);
-
-//   const handleLogin = async ({ username, password }) => {
-//     try {
-//       const res = await LoginUser(username.trim(), password);
-
-//       console.log("Login API response:", res);
-
-//       // LoginUser ke response mein success true hona zaroori hai.
-//       if (res?.success !== true) {
-//         return {
-//           success: false,
-//           message:
-//             res?.message ||
-//             res?.data?.message ||
-//             "Invalid username or password.",
-//         };
-//       }
-
-//       // Update UI after the API confirms successful login.
-//       setIsUser(true);
-
-//       return {
-//         success: true,
-//         data: res?.data,
-//       };
-//     } catch (error) {
-//       console.error("Login failed:", error);
-
-//       setIsUser(false);
-
-//       return {
-//         success: false,
-//         message:
-//           error?.response?.data?.message ||
-//           error?.message ||
-//           "Login failed. Please check your credentials and try again.",
-//       };
-//     }
-//   };
-
-//   if (isChecking) {
-//     return (
-//       <div className="flex min-h-screen items-center justify-center text-sm text-slate-400">
-//         Checking login status...
-//       </div>
-//     );
-//   }
-
-//   return <LoginDialog onLogin={handleLogin} islogin={isUser} />;
-// };
-
-// export default IsAuthenticate;
 import LoginDialog from "./LoginDialog";
-import { LoginUser } from "@/api/api";
+import { LoginUser, checkUserIsLogin } from "@/api/api";
+
+const extractUser = (payload) => {
+  const candidates = [
+    payload?.user,
+    payload?.data?.user,
+    payload?.data?.data?.user,
+    payload?.data?.data,
+    payload?.data,
+    payload,
+  ];
+
+  for (const candidate of candidates) {
+    if (
+      candidate &&
+      typeof candidate === "object" &&
+      !Array.isArray(candidate) &&
+      (candidate.username ||
+        candidate._id ||
+        candidate.id ||
+        candidate.type ||
+        candidate.role)
+    ) {
+      return candidate;
+    }
+  }
+
+  return null;
+};
 
 const IsAuthenticate = ({ isAuthenticated, onAuthChange }) => {
   const handleLogin = async ({ username, password }) => {
+    const normalizedUsername = String(username ?? "").trim();
+
+    if (!normalizedUsername || !password) {
+      return {
+        success: false,
+        message: "Username and password are required.",
+      };
+    }
+
     try {
-      const res = await LoginUser(username.trim(), password);
+      const loginResponse = await LoginUser(normalizedUsername, password);
 
-      console.log("Login API response:", res);
-
-      if (res?.success !== true) {
+      if (loginResponse?.success !== true) {
         return {
           success: false,
           message:
-            res?.message ||
-            res?.data?.message ||
+            loginResponse?.message ||
+            loginResponse?.data?.message ||
             "Invalid username or password.",
         };
       }
 
-      const authenticatedUser = res?.user ??
-        res?.data?.user ??
-        res?.data?.data?.user ?? {
-          username: username.trim(),
-          type: username.trim(),
-        };
+      let authenticatedUser = extractUser(loginResponse);
 
-      // Update App.jsx immediately; no page reload needed.
+      // Some login APIs return success without the user profile.
+      // Verify the session rather than inventing a role or division.
+      if (!authenticatedUser) {
+        const sessionResponse = await checkUserIsLogin();
+
+        if (sessionResponse?.success === false) {
+          return {
+            success: false,
+            message:
+              sessionResponse?.message ||
+              "Login succeeded, but the user session could not be verified.",
+          };
+        }
+
+        authenticatedUser = extractUser(sessionResponse);
+      }
+
+      if (!authenticatedUser) {
+        return {
+          success: false,
+          message:
+            "Login succeeded, but the user profile is missing. Check the login and /auth/me API responses.",
+        };
+      }
+
+      // Update App.jsx without reloading the page.
       onAuthChange?.(authenticatedUser);
 
       return {
         success: true,
-        data: res?.data,
+        data: loginResponse?.data ?? loginResponse,
       };
     } catch (error) {
-      console.error("Login failed:", error);
-
       return {
         success: false,
         message:

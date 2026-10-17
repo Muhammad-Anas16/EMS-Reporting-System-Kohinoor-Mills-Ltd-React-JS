@@ -10,11 +10,8 @@ import DivisionInfoCard from "@/components/dashboard/DivisionInfoCard";
 
 const DashboardPage = () => {
   return (
-    <div className="mx-auto w-full max-w-[1700px] px-4 pb-8 pt-6 sm:px-6 xl:px-8">
-      {/* =====================================================
-          TOP CARDS
-      ===================================================== */}
-
+    <main className="mx-auto w-full max-w-[1700px] px-4 pb-8 pt-6 sm:px-6 xl:px-8">
+      {/* Top summary cards */}
       <section className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {statCards1.map((card) => (
           <TopCard key={card.id} card={card} />
@@ -27,41 +24,27 @@ const DashboardPage = () => {
         ))}
       </section>
 
-      {/* =====================================================
-          MAIN DASHBOARD
-      ===================================================== */}
-
+      {/* Main dashboard */}
       <section className="grid gap-4 xl:grid-cols-[250px_minmax(0,1fr)_355px]">
-        {/* ===================================================
-            LEFT COLUMN
-        =================================================== */}
-
-        <div className="space-y-4">
+        {/* Left column */}
+        <div className="min-w-0 space-y-4">
           <DivisionInfoCard />
-
           <AlertsCard />
         </div>
 
-        {/* ===================================================
-            CENTER COLUMN
-        =================================================== */}
-
+        {/* Center column */}
         <div className="min-w-0 space-y-4">
           <BuildingEnergyVisual />
-
           <EnergySummary />
         </div>
 
-        {/* ===================================================
-            RIGHT COLUMN
-        =================================================== */}
-
+        {/* Right column */}
         <div className="min-w-0 space-y-4">
           <ConsumptionChart />
-          <ResourceMix /> // pieChart Component
+          <ResourceMix />
         </div>
       </section>
-    </div>
+    </main>
   );
 };
 

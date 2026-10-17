@@ -1,21 +1,4 @@
-// import React from "react";
-// import { useLocation } from "react-router";
-
-// const PerDepartmentPage = () => {
-//   const { pathname } = useLocation();
-//   const location = pathname.split("/").splice(1, 2);
-//   console.log(location[0].toLocaleString())
-//   console.log(location[1].toLocaleString())
-//   return (
-//     <div>
-//       <h1>department</h1>
-//     </div>
-//   );
-// };
-
-// export default PerDepartmentPage;
-
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { useParams } from "react-router";
 
 import ReportTable from "@/components/datalist/reportTable";
@@ -29,23 +12,41 @@ import DataLoading from "@/components/common/DataLoading";
 import DataError from "@/components/common/DataError";
 import DataUpdating from "@/components/common/DataUpdating";
 
+const decodeParam = (value) => {
+  try {
+    return decodeURIComponent(String(value ?? ""));
+  } catch {
+    return String(value ?? "");
+  }
+};
+
+const normalizeName = (value) =>
+  decodeParam(value).trim().replace(/[-_]+/g, " ").replace(/\s+/g, " ");
+
+const getMeterValue = (meter) => {
+  const rawValue =
+    meter?.value ??
+    meter?.liveValue ??
+    meter?.currentValue ??
+    meter?.bacnetValue;
+
+  if (rawValue === null || rawValue === undefined || rawValue === "") {
+    return 0;
+  }
+
+  const value = Number(rawValue);
+  return Number.isFinite(value) ? value : 0;
+};
+
 const PerDepartmentPage = () => {
   const { divisionName, department } = useParams();
 
-  // console.log("Division =>", divisionName);
-  // console.log("Department =>", department);
+  const division = useMemo(
+    () => normalizeName(divisionName || "Dyeing"),
+    [divisionName],
+  );
 
-  const division = useMemo(() => {
-    return decodeURIComponent(divisionName || "")
-      .trim()
-      .replace(/[-_]+/g, " ");
-  }, [divisionName]);
-
-  const departmentName = useMemo(() => {
-    return decodeURIComponent(department || "")
-      .trim()
-      .replace(/[-_]+/g, " ");
-  }, [department]);
+  const departmentName = useMemo(() => normalizeName(department), [department]);
 
   const {
     data: divisionData,
@@ -54,16 +55,10 @@ const PerDepartmentPage = () => {
     error,
     isFetching,
     refetch,
-  } = useAuroraDyeingUtilities(
-    division ? division.charAt(0).toUpperCase() + division.slice(1) : "Dyeing",
-  );
-
-  // --------------------------------
-  // Selected Department Data
-  // --------------------------------
+  } = useAuroraDyeingUtilities(division);
 
   const systemData = useMemo(() => {
-    if (!divisionData) {
+    if (!divisionData || !departmentName) {
       return null;
     }
 
@@ -78,37 +73,30 @@ const PerDepartmentPage = () => {
     }
 
     const departmentKey = Object.keys(departments).find(
-      (key) => key.toLowerCase() === departmentName.toLowerCase(),
+      (key) =>
+        normalizeName(key).toLowerCase() === departmentName.toLowerCase(),
     );
 
     if (!departmentKey) {
       return null;
     }
 
-    const departmentMeters = Array.isArray(departments[departmentKey])
-      ? departments[departmentKey]
-      : [];
+    const sourceMeters = departments[departmentKey];
 
-    const totalValue = departmentMeters.reduce((total, meter) => {
-      const value = Number(
-        meter?.value ??
-          meter?.liveValue ??
-          meter?.currentValue ??
-          meter?.bacnetValue ??
-          0,
-      );
+    const departmentMeters = Array.isArray(sourceMeters) ? sourceMeters : [];
 
-      return Number.isFinite(value) ? total + value : total;
-    }, 0);
+    const totalValue = departmentMeters.reduce(
+      (total, meter) => total + getMeterValue(meter),
+      0,
+    );
 
     return {
       ...divisionData,
-
       division,
-
       department: departmentKey,
 
       departments: {
+        ...divisionData.departments,
         type: [departmentKey],
         data: {
           [departmentKey]: departmentMeters,
@@ -116,7 +104,6 @@ const PerDepartmentPage = () => {
       },
 
       Data: departmentMeters,
-
       dataCount: departmentMeters.length,
 
       totalValue: {
@@ -125,32 +112,18 @@ const PerDepartmentPage = () => {
       },
 
       totalLoad: totalValue,
-
       totalConsumption: totalValue,
-
-      bacnetData: divisionData?.bacnetData || [],
+      bacnetData: divisionData?.bacnetData ?? [],
     };
   }, [divisionData, division, departmentName]);
-
-  // --------------------------------
-  // Loading
-  // --------------------------------
 
   if (isPending) {
     return <DataLoading />;
   }
 
-  // --------------------------------
-  // Error
-  // --------------------------------
-
   if (isError) {
     return <DataError error={error} onRetry={refetch} />;
   }
-
-  // --------------------------------
-  // Department Not Found
-  // --------------------------------
 
   if (!systemData) {
     return (
@@ -162,7 +135,10 @@ const PerDepartmentPage = () => {
             {departmentName || "Unknown Department"}
           </p>
 
+          <p className="mt-1 text-xs text-white/40">Division: {division}</p>
+
           <button
+            type="button"
             onClick={() => refetch()}
             className="mt-4 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm hover:bg-white/10"
           >
@@ -195,7 +171,7 @@ const PerDepartmentPage = () => {
           </div>
         </section>
 
-        {/* KPI Cards */}
+        {/* KPI cards */}
         <section className="w-full">
           <CardsComponent data={systemData} />
         </section>
@@ -203,12 +179,10 @@ const PerDepartmentPage = () => {
         {/* Charts */}
         <section className="mt-4 w-full">
           <div className="grid w-full grid-cols-1 gap-4 lg:grid-cols-10">
-            {/* Area Chart */}
             <div className="min-w-0 lg:col-span-7">
               <AreaChartCard data={systemData} label="Department" unit="kWh" />
             </div>
 
-            {/* Pie Chart */}
             <div className="min-w-0 lg:col-span-3">
               <PieChartCard
                 data={systemData}
@@ -219,13 +193,13 @@ const PerDepartmentPage = () => {
           </div>
         </section>
 
-        {/* Table */}
+        {/* Report table */}
         <section className="mt-4 w-full min-w-0">
           <ReportTable
             data={systemData}
             showMeters={8}
-            headerAllow={true}
-            pagiantionAllow={true}
+            headerAllow
+            pagiantionAllow
           />
         </section>
       </main>

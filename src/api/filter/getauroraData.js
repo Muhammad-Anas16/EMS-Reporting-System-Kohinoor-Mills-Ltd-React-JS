@@ -1,183 +1,204 @@
 import { getSpecificValue } from "@/data/BacNetData";
-import { bacnetRead } from "../api";
+import { bacnetRead } from "@/api/api";
+
+const normalizeBACnetResponse = (response) => {
+  let payload = response;
+
+  for (let depth = 0; depth < 3; depth += 1) {
+    if (Array.isArray(payload)) break;
+
+    if (payload?.success === false || payload?.ok === false) {
+      break;
+    }
+
+    if (Array.isArray(payload?.data)) {
+      break;
+    }
+
+    if (payload?.data && typeof payload.data === "object") {
+      payload = payload.data;
+      continue;
+    }
+
+    break;
+  }
+
+  const groups = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.data)
+      ? payload.data
+      : [];
+
+  const data = groups.flatMap((item) => {
+    const parentInstance = [
+      item?.instance,
+      item?.instanceNumber,
+      item?.objectInstance,
+      item?.requestedInstance,
+    ]
+      .map(Number)
+      .find((value) => Number.isSafeInteger(value) && value >= 0);
+
+    const found = Array.isArray(item?.found) ? item.found : [item];
+
+    return found
+      .map((entry) => {
+        const candidateInstances = [
+          entry?.instance,
+          entry?.instanceNumber,
+          entry?.objectInstance,
+          entry?.requestedInstance,
+          parentInstance,
+        ];
+
+        const instance = candidateInstances
+          .map(Number)
+          .find((value) => Number.isSafeInteger(value) && value >= 0);
+
+        const candidates = [
+          entry?.value,
+          entry?.presentValue,
+          entry?.present_value,
+          entry?.currentValue,
+          entry?.current_value,
+        ];
+
+        let value = null;
+
+        for (const candidate of candidates) {
+          if (
+            candidate === null ||
+            candidate === undefined ||
+            candidate === ""
+          ) {
+            continue;
+          }
+
+          const number = Number(candidate);
+
+          if (Number.isFinite(number)) {
+            value = number;
+            break;
+          }
+        }
+
+        return {
+          ...entry,
+          ...(instance !== undefined && { instance }),
+          value,
+        };
+      })
+      .filter((entry) => entry.instance !== undefined);
+  });
+
+  return {
+    success: payload?.success !== false && payload?.ok !== false,
+    data,
+    matchedObjects: payload?.matchedObjects ?? data.length,
+    requestedInstances: payload?.requestedInstances ?? [],
+    message: payload?.message,
+  };
+};
 
 const getBACnetData = async (instances = []) => {
-  try {
-    const response = await bacnetRead(instances);
+  if (!Array.isArray(instances) || instances.length === 0) {
+    return {
+      success: false,
+      data: [],
+      matchedObjects: 0,
+      requestedInstances: [],
+      message: "No valid BACnet instances found.",
+    };
+  }
 
-    if (response?.success === false) {
+  const normalizedInstances = [
+    ...new Set(
+      instances
+        .map(Number)
+        .filter((instance) => Number.isSafeInteger(instance) && instance >= 0),
+    ),
+  ];
+
+  if (normalizedInstances.length === 0) {
+    return {
+      success: false,
+      data: [],
+      matchedObjects: 0,
+      requestedInstances: [],
+      message: "No valid BACnet instances found.",
+    };
+  }
+
+  try {
+    const response = await bacnetRead(normalizedInstances);
+
+    if (response?.success === false || response?.ok === false) {
       return {
         success: false,
         data: [],
-        message: response.message || "BACnet data read failed",
+        matchedObjects: 0,
+        requestedInstances: normalizedInstances,
+        message: response?.message || "BACnet data read failed.",
       };
     }
 
-    const foundData = (response?.data || []).flatMap((item) =>
-      (item?.found || []).map((found) => ({
-        ...found,
-      })),
-    );
+    const result = normalizeBACnetResponse(response);
 
     return {
-      success: true,
-      data: foundData,
-      message: "Get BacNet Data Successfully",
+      ...result,
+      requestedInstances:
+        result.requestedInstances.length > 0
+          ? result.requestedInstances
+          : normalizedInstances,
     };
   } catch (error) {
     return {
       success: false,
       data: [],
+      matchedObjects: 0,
+      requestedInstances: normalizedInstances,
       message:
         error?.response?.data?.message ||
         error?.message ||
-        "BACnet data read failed",
+        "BACnet data read failed.",
     };
   }
 };
 
-//    7. Merge config + live BACnet data
-// const mergeMeterData = (meters = [], bacnetData = []) => {
-//   // Active
-//   return meters.map((meter) => {
-//     const liveValue = findBACnetValueForMeter(meter, bacnetData);
-
-//     return {
-//       ...meter,
-
-//       value: liveValue,
-//       liveValue,
-//       currentValue: liveValue,
-//       bacnetValue: liveValue,
-
-//       hasLiveValue: liveValue !== null,
-//     };
-//   });
-// };
-
-//    8. Calculate total live value
-// const calculateTotalValue = (meters = []) => {
-//   // Active
-//   return meters.reduce((total, meter) => {
-//     const value = Number(meter?.value);
-
-//     if (!Number.isFinite(value)) {
-//       return total;
-//     }
-
-//     return total + value;
-//   }, 0);
-// };
-
-//    10. Group meters by department
-// const groupByDepartment = (meters = []) => {
-//   // Active
-//   return meters.reduce((result, meter) => {
-//     const department = meter?.department || "Unknown";
-
-//     if (!result[department]) {
-//       result[department] = [];
-//     }
-
-//     result[department].push(meter);
-
-//     return result;
-//   }, {});
-// };
-
-//    11. Main function
-const AuroraData = async (division = "dyeing") => {
+const AuroraData = async (division = "Dyeing") => {
   try {
     const instances = getSpecificValue(division, "instance");
-    // console.log("My => ", instances);
 
-    const bacNetResult = await getBACnetData(instances);
+    if (!Array.isArray(instances)) {
+      return {
+        division,
+        success: false,
+        data: [],
+        matchedObjects: 0,
+        requestedInstances: [],
+        message: `No BACnet instances found for division: ${division}`,
+      };
+    }
 
-    //    Merge live values
-    // const liveMeters = mergeMeterData(meters, bacNetResult.data);
-
-    //    Total live value
-    // const totalValue = calculateTotalValue(liveMeters);
-
-    //    Departments
-    // const departmentData = groupByDepartment(liveMeters);
-
-    // return {
-    //   division: actualDivision,
-
-    //   departments: {
-    //     type: Object.keys(departmentData),
-    //     data: departmentData,
-    //   },
-
-    //   Data: liveMeters,
-
-    //   dataCount: liveMeters.length,
-
-    //   totalValue: {
-    //     value: totalValue,
-    //     totaObject: liveMeters.length,
-    //   },
-
-    //   totalLoad: totalValue,
-
-    //   totalConsumption: totalValue,
-
-    //   bacnetData: bacNetResult.data,
-
-    //   success: bacNetResult.success,
-
-    //   matchedObjects: bacNetResult.matchedObjects,
-
-    //   requestedInstances: bacNetResult.requestedInstances,
-
-    //   ...(bacNetResult.message && {
-    //     message: bacNetResult.message,
-    //   }),
-    // };
-
-    return bacNetResult;
-  } catch (error) {
-    console.error("AuroraUtilities Error:", error);
+    const result = await getBACnetData(instances);
 
     return {
       division,
+      ...result,
+    };
+  } catch (error) {
+    console.error("AuroraData Error:", error);
 
-      utilities: {
-        type: [],
-        data: null,
-      },
-
-      departments: {
-        type: [],
-        data: {},
-      },
-
-      Data: [],
-
-      dataCount: 0,
-
-      totalValue: {
-        value: 0,
-        totaObject: 0,
-      },
-
-      totalLoad: 0,
-
-      totalConsumption: 0,
-
-      bacnetData: [],
-
-      matchedObjects: 0,
-
-      requestedInstances: [],
-
+    return {
+      division,
       success: false,
-
+      data: [],
+      matchedObjects: 0,
+      requestedInstances: [],
       message:
         error?.response?.data?.message ||
         error?.message ||
-        "Aurora utilities data failed",
+        "Aurora BACnet data failed.",
     };
   }
 };

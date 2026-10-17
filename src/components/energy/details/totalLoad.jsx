@@ -24,6 +24,7 @@ const formatValue = (value) => {
 
 const TotalLoad = ({ data }) => {
   const value = data?.totalValue?.value;
+  // console.log("in Tatal Load value : ", data);
 
   return (
     <div className="w-full rounded-2xl border border-white/10 bg-white/5 p-5">

@@ -62,11 +62,3 @@ export const getHTGroupInstances = (division) => {
 
   return [...new Set(instances)];
 };
-
-// const weavingHTInstances = getHTGroupInstances("weaving");
-// const apparelHTInstances = getHTGroupInstances("apparel");
-// const dyeingHTInstances = getHTGroupInstances("dyeing");
-
-// console.log("Weaving HT:", weavingHTInstances);
-// console.log("Apparel HT:", apparelHTInstances);
-// console.log("Dyeing HT:", dyeingHTInstances);

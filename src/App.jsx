@@ -11,7 +11,6 @@ import PerDepartmentPage from "./page/perDepartmentPage";
 import IsAuthenticate from "./components/auth/isAuthenticate";
 import AdminPanel from "./page/AdminPanel";
 import { checkUserIsLogin } from "./api/api";
-import DivisionDataPreloader from "./components/DivisionDataPreloader";
 
 const PageNotFound = () => (
   <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
@@ -24,7 +23,6 @@ function App() {
   const [user, setUser] = useState(null);
   const [isChecking, setIsChecking] = useState(true);
 
-  // Admin detection
   const isAdmin = [
     user?.role?.name,
     typeof user?.role === "string" ? user.role : "",
@@ -36,14 +34,12 @@ function App() {
         .toLowerCase() === "admin",
   );
 
-  // Normal user's allowed division
   const userType = String(user?.type ?? "")
     .trim()
     .toLowerCase();
 
   const userPath = userType ? `/${encodeURIComponent(userType)}` : null;
 
-  // Check login status
   useEffect(() => {
     let isMounted = true;
 
@@ -53,15 +49,14 @@ function App() {
 
         if (!isMounted) return;
 
-        if (response?.isLoggedIn === true && response?.user) {
-          setUser(response.user);
-        } else {
-          setUser(null);
-        }
+        setUser(
+          response?.isLoggedIn === true && response?.user
+            ? response.user
+            : null,
+        );
       } catch (error) {
-        console.error("Unable to check authentication:", error);
-
         if (isMounted) {
+          console.error("Unable to check authentication:", error);
           setUser(null);
         }
       } finally {
@@ -78,7 +73,6 @@ function App() {
     };
   }, []);
 
-  // Update user after login/logout
   const handleAuthChange = useCallback((authenticatedUser) => {
     setUser(authenticatedUser || null);
   }, []);
@@ -93,8 +87,6 @@ function App() {
 
   return (
     <main className="min-h-screen bg-[#070a0e] text-white">
-      {user && isAdmin && <DivisionDataPreloader enabled={isAdmin} />}
-
       {user && <Navbar userData={user} />}
 
       <IsAuthenticate
@@ -104,7 +96,6 @@ function App() {
 
       {user && (
         <Routes>
-          {/* Home route */}
           <Route
             path="/"
             element={
@@ -118,13 +109,11 @@ function App() {
             }
           />
 
-          {/* Admin panel: admin only */}
           <Route
             path="/admin"
             element={isAdmin ? <AdminPanel /> : <PageNotFound />}
           />
 
-          {/* Normal user: own division only */}
           {!isAdmin && userType && (
             <>
               <Route path={userPath} element={<ConsumptionData />} />
@@ -143,7 +132,6 @@ function App() {
             </>
           )}
 
-          {/* Admin can access all division routes */}
           {isAdmin && (
             <Route path="/:divisionName">
               <Route index element={<ConsumptionData />} />
@@ -156,7 +144,6 @@ function App() {
             </Route>
           )}
 
-          {/* Block every URL that is not allowed */}
           <Route
             path="*"
             element={
