@@ -17,6 +17,9 @@ import DataLoading from "@/components/common/DataLoading";
 import DataError from "@/components/common/DataError";
 import DataUpdating from "@/components/common/DataUpdating";
 import IncomingUtilities from "@/components/energy/details/IncomingUtilities";
+import DivisionWiseComparison from "@/components/energy/details/DivisionWiseComparison";
+import HTGroupsCards from "@/components/energy/details/HTGroupsCards";
+import WaterSteamGasCards from "@/components/energy/details/WaterSteamGasCards";
 
 const normalizeDivision = (value) => {
   try {
@@ -182,6 +185,13 @@ const ConsumptionData = () => {
         <div className="mt-3">
           <IncomingUtilities data={utilis} division={division} />
         </div>
+
+        {/* Division-wise Comparison */}
+        <DivisionWiseComparison data={utilis} division={division} />
+
+        <HTGroupsCards data={utilis} division={division} />
+
+        <WaterSteamGasCards data={utilis} division={division} />
 
         {/* MAIN DASHBOARD */}
         <section
