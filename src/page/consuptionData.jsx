@@ -20,6 +20,8 @@ import IncomingUtilities from "@/components/energy/details/IncomingUtilities";
 import DivisionWiseComparison from "@/components/energy/details/DivisionWiseComparison";
 import HTGroupsCards from "@/components/energy/details/HTGroupsCards";
 import WaterSteamGasCards from "@/components/energy/details/WaterSteamGasCards";
+import LiveStatusIndicator from "@/components/energy/details/LiveStatusIndicator";
+import ConsumptionTrendChart from "@/components/energy/details/ConsumptionTrendChart";
 
 const normalizeDivision = (value) => {
   try {
@@ -191,6 +193,8 @@ const ConsumptionData = () => {
 
         <HTGroupsCards data={utilis} division={division} />
 
+        <LiveStatusIndicator data={utilis} division={division} />
+
         <WaterSteamGasCards data={utilis} division={division} />
 
         {/* MAIN DASHBOARD */}
@@ -247,6 +251,12 @@ const ConsumptionData = () => {
             </Panel>
           </div>
         </section>
+
+        <ConsumptionTrendChart
+          data={utilis?.energyLog?.data ?? utilis?.history ?? []}
+          division={division}
+          unit="kWh"
+        />
 
         {/* ANALYTICS */}
         <section className="mt-6 min-w-0 space-y-4">
